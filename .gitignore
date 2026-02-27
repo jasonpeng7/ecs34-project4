@@ -1,0 +1,8 @@
+.vscode
+
+run_csvbustest
+run_dsvtest
+run_strsinktest
+run_strsrctest
+run_strtest
+run_xmltest
