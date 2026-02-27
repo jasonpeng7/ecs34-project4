@@ -80,7 +80,7 @@ run_osmtest: $(TEST_OSM_TARGET)
 	mv ${TESTTMP_DIR}/$@ $@
 
 gencoverage:
-	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors source
+	lcov --capture --directory . --output-file $(TESTCOVER_DIR)/coverage.info --ignore-errors inconsistent,inconsistent
 	lcov --remove $(TESTCOVER_DIR)/coverage.info '/usr/*' '*/testsrc/*' --output-file $(TESTCOVER_DIR)/coverage.info
 	genhtml $(TESTCOVER_DIR)/coverage.info --output-directory $(TESTCOVER_DIR)
 
