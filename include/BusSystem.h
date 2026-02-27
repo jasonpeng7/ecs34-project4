@@ -1,5 +1,5 @@
-#ifndef BUSROUTE_H
-#define BUSROUTE_H
+#ifndef BUSSYSTEM_H
+#define BUSSYSTEM_H
 
 #include "StreetMap.h"
 
@@ -7,7 +7,7 @@ class CBusSystem{
     public:
         using TStopID = uint64_t;
 
-        static const TStopID InvalidStopID = std::numeric_limits<TStopID>::max();
+        inline static constexpr TStopID InvalidStopID = std::numeric_limits<TStopID>::max();
 
         struct SStop{
             virtual ~SStop(){};
