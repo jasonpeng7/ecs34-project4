@@ -11,11 +11,11 @@ struct COpenStreetMap::SImplementation
     struct SNodeImpl : public CStreetMap::SNode
     {
         TNodeID DID;
-        TLocation DLocation;
+        SLocation DLocation;
         std::vector<TAttribute> DAttributes;
 
         SNodeImpl(TNodeID id, double lat, double lon)
-            : DID(id), DLocation(std::make_pair(lat, lon))
+            : DID(id), DLocation(lat, lon)
         {
         }
 
@@ -24,7 +24,7 @@ struct COpenStreetMap::SImplementation
             return DID;
         }
 
-        TLocation Location() const noexcept override
+        SLocation Location() const noexcept override
         {
             return DLocation;
         }
