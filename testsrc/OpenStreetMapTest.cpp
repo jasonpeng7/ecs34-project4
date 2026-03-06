@@ -36,8 +36,8 @@ TEST(OpenStreetMapTest, SingleNodeByIndexAndID)
     EXPECT_EQ(Node0->ID(), 1ULL);
 
     auto Loc = Node0->Location();
-    EXPECT_DOUBLE_EQ(Loc.first, 38.5);    // lat
-    EXPECT_DOUBLE_EQ(Loc.second, -121.7); // lon
+    EXPECT_DOUBLE_EQ(Loc.DLatitude, 38.5);    // lat
+    EXPECT_DOUBLE_EQ(Loc.DLongitude, -121.7); // lon
 }
 
 TEST(OpenStreetMapTest, EmptyMapCounts)
@@ -197,8 +197,8 @@ TEST(OpenStreetMapTest, InvalidNodeInputsAreSkipped)
     ASSERT_NE(Node, nullptr);
 
     auto Loc = Node->Location();
-    EXPECT_DOUBLE_EQ(Loc.first, 38.5);
-    EXPECT_DOUBLE_EQ(Loc.second, -121.7);
+    EXPECT_DOUBLE_EQ(Loc.DLatitude, 38.5);
+    EXPECT_DOUBLE_EQ(Loc.DLongitude, -121.7);
 }
 
 TEST(OpenStreetMapTest, InvalidWayInputsAreSkipped)
