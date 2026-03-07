@@ -9,6 +9,9 @@ TEST(DijkstraPathRouter, SimpleTest){
     EXPECT_EQ(PathRouter.VertexCount(), 1);
     EXPECT_EQ(std::any_cast<std::string>(PathRouter.GetVertexTag(VertexID)), "foo");
 
+    auto VertexID2 = PathRouter.AddVertex(22);
+    EXPECT_EQ(PathRouter.VertexCount(), 2);
+    EXPECT_EQ(std::any_cast<int>(PathRouter.GetVertexTag(VertexID2)), 22);
 }
 
 TEST(DijkstraPathRouter, ShortestPath){
