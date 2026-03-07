@@ -1,5 +1,6 @@
 #include "DijkstraPathRouter.h"
 #include <queue>
+#include <stack>
 #include <iostream>
 
 struct CDijkstraPathRouter::SImplementation {
@@ -90,7 +91,7 @@ struct CDijkstraPathRouter::SImplementation {
             }
 
             // now we explore all the nodes neighbors
-            for(auto edge: DVertices[current_distance]->DEdges) {
+            for(auto edge: DVertices[current_id]->DEdges) {
                 // we want to grab the weights and know what the next node is
                 // each edge stored as <weight, vertex>
                 double next_weight = edge.first;
@@ -105,10 +106,32 @@ struct CDijkstraPathRouter::SImplementation {
                 }
             }
        }
+        // if the destination's weight was never updated/set --> we never reached it so no path exists
+        if(Weights[dest] == std::numeric_limits<double>::max()) {
+            return NoPathExists;
+        }
 
+        // now we want to reconstruct our path, like nitta explained in class, we can use a stack to reverse
+        std::stack<TVertexID> stack;
+        TVertexID curr = dest; // since we are essentially walking back to the start
+        while(curr != std::numeric_limits<TVertexID>::max()) {
+            std::cout << "previous " << Previous[curr] << std::endl;
+            stack.push(curr);
+            if(curr == src) {
+                std::cout << "found path from des to src" << std::endl;
+                break;
+            }
+            // move back
+            curr = Previous[curr];
+        }
 
-        // construct path is to do reverse probably use stack
-        return 0.0;
+        // now from the stack, just pop off for correct order
+        while(stack.size() > 0) {
+            TVertexID top = stack.top();
+            stack.pop();
+            path.push_back(top);
+        }
+        return Weights[dest];
     }
 };
 
