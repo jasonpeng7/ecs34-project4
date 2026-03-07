@@ -53,7 +53,7 @@ TEST_OSM_TARGET	= $(TESTBIN_DIR)/testosm
 TEST_DPR_TARGET = $(TESTBIN_DIR)/testdijkstrapathrouter
 
 
-all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_osmtest run dpr_test gencoverage
+all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_osmtest run_dprtest gencoverage
 
 .PHONY: cleangcda
 cleangcda:
