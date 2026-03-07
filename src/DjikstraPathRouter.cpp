@@ -51,6 +51,7 @@ struct CDijkstraPathRouter::SImplementation {
         // extra credit
         return true;
     }
+
     double FindShortestPath(TVertexID src, TVertexID dest, std::vector<TVertexID> &path) noexcept {
         std::vector<double> Weights;
         Weights.resize(DVertices.size(), std::numeric_limits<double>::max());
@@ -62,9 +63,37 @@ struct CDijkstraPathRouter::SImplementation {
         // make priority queue and put weight + shared_ptr and just keep going until we have empty PQ
 
         // construct path is to do reverse probably use stack
-
-
-
     }
 }
+
+CDijkstraPathRouter::CDijkstraPathRouter() {
+
+}
+
+CDijkstraPathRouter::~CDijkstraPathRouter() {}
+
+std::size_t CDijkstraPathRouter::VertexCount() const noexcept {
+    return DImplementation->VertexCount();
+}
+
+TVertexID CDijkstraPathRouter::AddVertex(std::any tag) noexcept {
+    return DImplementation->AddVertex(tag);
+}
+
+std::any CDijkstraPathRouter::GetVertexTag(TVertexID id) const noexcept {
+    return DImplementation->GetVertexTag(id);
+}
+
+bool CDijkstraPathRouter::AddEdge(TVertexID src, TVertexID dest, double weight, bool bidir = false) noexcept {
+    return DImplementation->AddEdge(src, dest, weight, bidir=false);
+}
+
+bool CDijkstraPathRouter::Precompute(std::chrono::steady_clock::time_point deadline) noexcept {
+    return DImplementation->Precompute(deadline);
+}
+
+double CDijkstraPathRouter::FindShortestPath(TVertexID src, TVertexID dest, std::vector<TVertexID> &path) noexcept {
+    return DImplementation->FindShortestPath(src, dest, path);
+}
+
        
