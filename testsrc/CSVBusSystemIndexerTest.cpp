@@ -78,4 +78,6 @@ TEST(CSVBusSystemIndexer, RouteTest){
     EXPECT_TRUE(Routes.find(Route1Index) != Routes.end());
     EXPECT_TRUE(Routes.find(Route2Index) != Routes.end());
 
+    EXPECT_EQ(BusSystemIndexer.RouteBetweenNodeIDs(101, 102), true);
+    EXPECT_EQ(BusSystemIndexer.RouteBetweenNodeIDs(102, 101), true);
 }
