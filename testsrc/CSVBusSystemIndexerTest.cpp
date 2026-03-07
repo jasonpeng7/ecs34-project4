@@ -199,6 +199,12 @@ TEST(CSVBusSystemIndexer, ComprehensiveTes){
    auto BusSystem = std::make_shared<CCSVBusSystem>(CSVReaderStops, CSVReaderRoutes);
    CBusSystemIndexer BusSystemIndexer(BusSystem);
 
+    auto Stop1 = BusSystemIndexer.SortedStopByIndex(0);
+    auto Stop2 = BusSystemIndexer.SortedStopByIndex(1);
+    auto Stop3 = BusSystemIndexer.SortedStopByIndex(2);
+    auto Stop4 = BusSystemIndexer.SortedStopByIndex(3);
+
+
    auto RouteA = BusSystemIndexer.SortedRouteByIndex(0);
    auto RouteB = BusSystemIndexer.SortedRouteByIndex(1);
    auto RouteC = BusSystemIndexer.SortedRouteByIndex(2);
@@ -209,6 +215,15 @@ TEST(CSVBusSystemIndexer, ComprehensiveTes){
    ASSERT_TRUE(bool(RouteC));
    ASSERT_TRUE(bool(RouteD));
 
+   EXPECT_EQ(BusSystemIndexer.SortedStopByIndex(4), nullptr);
+   EXPECT_EQ(BusSystemIndexer.SortedRouteByIndex(4), nullptr);
+
+   EXPECT_EQ(BusSystemIndexer.StopByNodeID(101),Stop1);
+   EXPECT_EQ(BusSystemIndexer.StopByNodeID(102),Stop2);
+   EXPECT_EQ(BusSystemIndexer.StopByNodeID(103),Stop3);
+   EXPECT_EQ(BusSystemIndexer.StopByNodeID(104),Stop4);
+   EXPECT_EQ(BusSystemIndexer.StopByNodeID(999),nullptr);
+
    EXPECT_EQ(RouteA->Name(),"A");
    EXPECT_EQ(RouteB->Name(),"B");
    EXPECT_EQ(RouteC->Name(),"C");
@@ -218,11 +233,11 @@ TEST(CSVBusSystemIndexer, ComprehensiveTes){
    EXPECT_EQ(RouteB->StopCount(), 2);
    EXPECT_EQ(RouteC->StopCount(), 2);
    EXPECT_EQ(RouteD->StopCount(), 2);
-
-   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes12;
-   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(101,102,Routes12));
-   EXPECT_EQ(Routes12.size(),1);
-   EXPECT_TRUE(Routes12.find(RouteA) != Routes12.end());
+   
+    EXPECT_EQ(RouteA->GetStopID(0),1);
+    EXPECT_EQ(RouteA->GetStopID(1),2);
+    EXPECT_EQ(RouteA->GetStopID(2),3);
+    EXPECT_EQ(RouteA->GetStopID(3), std::numeric_limits<CBusSystem::TStopID>::max());
 
    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes23;
    EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(102,103,Routes23));
