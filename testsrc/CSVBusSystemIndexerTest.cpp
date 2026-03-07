@@ -147,6 +147,65 @@ TEST(CSVBusSystemIndexer, AdjacentNodesTest){
    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes6;
    EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,101,Routes6));
    EXPECT_EQ(Routes6.size(),0);
-
 }
+
+TEST(CSVBusSystemIndexer, ComprehensiveTes){
+   auto InStreamStops = std::make_shared<CStringDataSource>("stop_id,node_id\n"
+                                                            "1,101\n"
+                                                            "2,102\n"
+                                                            "3,103\n"
+                                                            "4,104");
+   auto InStreamRoutes = std::make_shared<CStringDataSource>("route,stop_id\n"
+                                                              "A,1\n"
+                                                              "A,2\n"
+                                                              "A,3\n"
+                                                              "B,2\n"
+                                                              "B,3\n"
+                                                              "C,3\n"
+                                                              "C,2\n"
+                                                              "D,3\n"
+                                                              "D,4");
+    /*
+    (101, 102) -> {A}
+    (102, 103) -> {A, B, C}
+    (103, 104) -> {D}
+    */
+   auto CSVReaderStops = std::make_shared<CDSVReader>(InStreamStops,',');
+   auto CSVReaderRoutes = std::make_shared<CDSVReader>(InStreamRoutes,',');
+   auto BusSystem = std::make_shared<CCSVBusSystem>(CSVReaderStops, CSVReaderRoutes);
+   CBusSystemIndexer BusSystemIndexer(BusSystem);
+
+   auto RouteA = BusSystemIndexer.SortedRouteByIndex(0);
+   auto RouteB = BusSystemIndexer.SortedRouteByIndex(1);
+   auto RouteC = BusSystemIndexer.SortedRouteByIndex(2);
+   auto RouteD = BusSystemIndexer.SortedRouteByIndex(3);
+
+   ASSERT_TRUE(bool(RouteA));
+   ASSERT_TRUE(bool(RouteB));
+   ASSERT_TRUE(bool(RouteC));
+   ASSERT_TRUE(bool(RouteD));
+
+   EXPECT_EQ(RouteA->Name(),"A");
+   EXPECT_EQ(RouteB->Name(),"B");
+   EXPECT_EQ(RouteC->Name(),"C");
+   EXPECT_EQ(RouteD->Name(),"D");
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes23;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(102,103,Routes23));
+   EXPECT_EQ(Routes23.size(),3);
+   EXPECT_TRUE(Routes23.find(RouteA) != Routes23.end());
+   EXPECT_TRUE(Routes23.find(RouteB) != Routes23.end());
+   EXPECT_TRUE(Routes23.find(RouteC) != Routes23.end());
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes34;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(103,104,Routes34));
+   EXPECT_EQ(Routes34.size(),1);
+   EXPECT_TRUE(Routes34.find(RouteD) != Routes34.end());
+
+   EXPECT_TRUE(BusSystemIndexer.RouteBetweenNodeIDs(103,102));
+   EXPECT_TRUE(BusSystemIndexer.RouteBetweenNodeIDs(102,103));
+   EXPECT_TRUE(BusSystemIndexer.RouteBetweenNodeIDs(103,104));
+   EXPECT_FALSE(BusSystemIndexer.RouteBetweenNodeIDs(101,104));
+}
+
 
