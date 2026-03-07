@@ -50,9 +50,18 @@ TEST(CSVBusSystemIndexer, RouteTest){
     auto InStreamRoutes = std::make_shared<CStringDataSource>(  "route,stop_id\n"
                                                                 "B,1\n"
                                                                 "B,2\n"
+                                                                "B,1\n"
                                                                 "A,2\n"
-                                                                "A,1"
-                                                                );
+                                                                "A,1\n"
+                                                                "A,2");
+    
+    /*
+    stops B = [1,2,1]
+    stops A = [2,1,2]
+
+    (101,102) = {B, A}
+    (102,101) = {B, A}
+    */
     auto CSVReaderStops = std::make_shared<CDSVReader>(InStreamStops,',');
     auto CSVReaderRoutes = std::make_shared<CDSVReader>(InStreamRoutes,',');
     auto BusSystem = std::make_shared<CCSVBusSystem>(CSVReaderStops, CSVReaderRoutes);
@@ -63,23 +72,32 @@ TEST(CSVBusSystemIndexer, RouteTest){
     auto Route1Index = BusSystemIndexer.SortedRouteByIndex(0);
     ASSERT_TRUE(bool(Route1Index));
     EXPECT_EQ(Route1Index->Name(),"A");
-    EXPECT_EQ(Route1Index->StopCount(),2);
+    EXPECT_EQ(Route1Index->StopCount(),3);
     EXPECT_EQ(Route1Index->GetStopID(0),2);
     EXPECT_EQ(Route1Index->GetStopID(1),1);
+    EXPECT_EQ(Route1Index->GetStopID(2),2);
     auto Route2Index = BusSystemIndexer.SortedRouteByIndex(1);
     ASSERT_TRUE(bool(Route2Index));
     EXPECT_EQ(Route2Index->Name(),"B");
-    EXPECT_EQ(Route2Index->StopCount(),2);
+    EXPECT_EQ(Route2Index->StopCount(),3);
     EXPECT_EQ(Route2Index->GetStopID(0),1);
     EXPECT_EQ(Route2Index->GetStopID(1),2);
+    EXPECT_EQ(Route2Index->GetStopID(2),1);
     std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes;
     EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(101,102,Routes));
     EXPECT_EQ(Routes.size(),2);
     EXPECT_TRUE(Routes.find(Route1Index) != Routes.end());
     EXPECT_TRUE(Routes.find(Route2Index) != Routes.end());
 
-    EXPECT_EQ(BusSystemIndexer.RouteBetweenNodeIDs(101, 102), true);
-    EXPECT_EQ(BusSystemIndexer.RouteBetweenNodeIDs(102, 101), true);
+    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes2;
+    EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(102,101,Routes2));
+    EXPECT_EQ(Routes2.size(),2);
+    EXPECT_TRUE(Routes2.find(Route1Index) != Routes2.end());
+    EXPECT_TRUE(Routes2.find(Route2Index) != Routes2.end());
+
+    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes3;
+    EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,103,Routes2));
+
 }
 
 TEST(CSVBusSystemIndexer, EmptySystemTest){
@@ -166,9 +184,15 @@ TEST(CSVBusSystemIndexer, ComprehensiveTes){
                                                               "D,3\n"
                                                               "D,4");
     /*
-    (101, 102) -> {A}
-    (102, 103) -> {A, B, C}
-    (103, 104) -> {D}
+    stop A = [1,2,3]
+    stop B = [2,3]
+    stop C = [3,2]
+    stop D = [3,4]
+
+    (101, 102) = {A}
+    (102, 103) = {A, B}
+    (103, 102) = {C}
+    (103, 104) = {D}
     */
    auto CSVReaderStops = std::make_shared<CDSVReader>(InStreamStops,',');
    auto CSVReaderRoutes = std::make_shared<CDSVReader>(InStreamRoutes,',');
@@ -190,12 +214,26 @@ TEST(CSVBusSystemIndexer, ComprehensiveTes){
    EXPECT_EQ(RouteC->Name(),"C");
    EXPECT_EQ(RouteD->Name(),"D");
 
+   EXPECT_EQ(RouteA->StopCount(), 3);
+   EXPECT_EQ(RouteB->StopCount(), 2);
+   EXPECT_EQ(RouteC->StopCount(), 2);
+   EXPECT_EQ(RouteD->StopCount(), 2);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes12;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(101,102,Routes12));
+   EXPECT_EQ(Routes12.size(),1);
+   EXPECT_TRUE(Routes12.find(RouteA) != Routes12.end());
+
    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes23;
    EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(102,103,Routes23));
-   EXPECT_EQ(Routes23.size(),3);
+   EXPECT_EQ(Routes23.size(),2);
    EXPECT_TRUE(Routes23.find(RouteA) != Routes23.end());
    EXPECT_TRUE(Routes23.find(RouteB) != Routes23.end());
-   EXPECT_TRUE(Routes23.find(RouteC) != Routes23.end());
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes32;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(103,102,Routes32));
+   EXPECT_EQ(Routes32.size(),1);
+   EXPECT_TRUE(Routes32.find(RouteC) != Routes32.end());
 
    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes34;
    EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(103,104,Routes34));
