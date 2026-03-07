@@ -143,5 +143,10 @@ TEST(CSVBusSystemIndexer, AdjacentNodesTest){
    std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes5;
    EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,104,Routes5));
    EXPECT_EQ(Routes5.size(),0);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes6;
+   EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,101,Routes6));
+   EXPECT_EQ(Routes6.size(),0);
+
 }
 
