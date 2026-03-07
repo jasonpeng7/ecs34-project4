@@ -56,6 +56,12 @@ struct CBusSystemIndexer::SImplementation{
                 auto Current = Route->GetStopID(Index);
                 auto FirstNodeID = DBusSystem->StopByID(Previous)->NodeID();
                 auto SecondNodeID = DBusSystem->StopByID(Current)->NodeID();
+                
+                // handle if node ID are not sequential
+                if(SecondNodeID < FirstNodeID) {
+                    std::swap(FirstNodeID, SecondNodeID);
+                }
+
                 auto Key = std::make_pair(FirstNodeID, SecondNodeID);
                 // if key dne, put unordered set, else append to set
                 auto Search = DRoutesByNodeID.find(Key);
@@ -81,11 +87,17 @@ struct CBusSystemIndexer::SImplementation{
     }
 
     std::shared_ptr<SStop> SortedStopByIndex(std::size_t index) const noexcept{
-        return DSortedStopsByIndex[index]; // do a check 
+        if(index >= StopCount()) {
+            return nullptr;
+        }
+        return DSortedStopsByIndex[index]; 
     }
 
     std::shared_ptr<SRoute> SortedRouteByIndex(std::size_t index) const noexcept{
-        return DSortedRoutesByIndex[index]; // stil need to do a check
+        if(index >= RouteCount()) {
+            return nullptr;
+        }
+        return DSortedRoutesByIndex[index]; 
     }
 
     std::shared_ptr<SStop> StopByNodeID(TNodeID id) const noexcept{
@@ -99,6 +111,9 @@ struct CBusSystemIndexer::SImplementation{
 
     bool RoutesByNodeIDs(TNodeID src, TNodeID dest, std::unordered_set<std::shared_ptr<SRoute> > &routes) const noexcept{
         // take pair of nodeID as a key and map to set of routes
+        if(dest < src) {
+            std::swap(src, dest);
+        }
         auto Search =  DRoutesByNodeID.find(std::make_pair(src, dest));
         if(Search != DRoutesByNodeID.end()) {
             routes = Search->second;
@@ -112,6 +127,15 @@ struct CBusSystemIndexer::SImplementation{
     }
 
     bool RouteBetweenNodeIDs(TNodeID src, TNodeID dest) const noexcept{
+        // return true if at least one route exists between the stops at src and dest
+        if(dest < src) {
+            std::swap(src, dest);
+        }
+
+        auto Search = DRoutesByNodeID.find(std::make_pair(src, dest));
+        if(Search != DRoutesByNodeID.end()) {
+            return true;
+        }
         return false;
     }
 
