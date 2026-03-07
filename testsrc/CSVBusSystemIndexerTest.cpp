@@ -102,3 +102,46 @@ TEST(CSVBusSystemIndexer, EmptySystemTest){
    EXPECT_FALSE(BusSystemIndexer.RouteBetweenNodeIDs(101,102));
 }
 
+
+TEST(CSVBusSystemIndexer, AdjacentNodesTest){
+   auto InStreamStops = std::make_shared<CStringDataSource>("stop_id,node_id\n"
+                                                            "1,101\n"
+                                                            "2,102\n"
+                                                            "3,103\n"
+                                                            "4,104");
+   auto InStreamRoutes = std::make_shared<CStringDataSource>("route,stop_id\n"
+                                                              "A,1\n"
+                                                              "A,2\n"
+                                                              "A,3\n"
+                                                              "A,4");
+    /*
+    (101, 102) = {A}
+    (102, 103) = {A}
+    (103, 104) = {A}
+    */
+   auto CSVReaderStops = std::make_shared<CDSVReader>(InStreamStops,',');
+   auto CSVReaderRoutes = std::make_shared<CDSVReader>(InStreamRoutes,',');
+   auto BusSystem = std::make_shared<CCSVBusSystem>(CSVReaderStops, CSVReaderRoutes);
+   CBusSystemIndexer BusSystemIndexer(BusSystem);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes1;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(101,102,Routes1));
+   EXPECT_EQ(Routes1.size(),1);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes2;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(102,103,Routes2));
+   EXPECT_EQ(Routes2.size(),1);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes3;
+   EXPECT_TRUE(BusSystemIndexer.RoutesByNodeIDs(103,104,Routes3));
+   EXPECT_EQ(Routes3.size(),1);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes4;
+   EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,103,Routes4));
+   EXPECT_EQ(Routes4.size(),0);
+
+   std::unordered_set< std::shared_ptr<CBusSystem::SRoute> > Routes5;
+   EXPECT_FALSE(BusSystemIndexer.RoutesByNodeIDs(101,104,Routes5));
+   EXPECT_EQ(Routes5.size(),0);
+}
+
