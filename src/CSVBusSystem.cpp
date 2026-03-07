@@ -210,14 +210,15 @@ struct CCSVBusSystem::SImplementation{
 
                         // however we need to check if stopId already exists, we dont want duplicates
                         // dont make copy, reference the vector, otherwise we wont be adding the stopId to the original vector
-                        auto &currRouteStops = DRoutesByName[RouteName]->DStopsForRoute;
-                        for(auto i = 0; i < currRouteStops.size(); i++) {
-                            if (currRouteStops[i] == StopId) {
-                                isInvalidRouteFile = true;
-                                return false;
-                            }
-                        }
-                        currRouteStops.push_back(StopId);
+                        // auto &currRouteStops = DRoutesByName[RouteName]->DStopsForRoute;
+                        // for(auto i = 0; i < currRouteStops.size(); i++) {
+                        //     if (currRouteStops[i] == StopId) {
+                        //         isInvalidRouteFile = true;
+                        //         return false;
+                        //     }
+                        // }
+                        // currRouteStops.push_back(StopId);
+                        DRoutesByName[RouteName]->DStopsForRoute.push_back(StopId);
                     }
                     // increment number of stops by 1 
                     DRoutesByName[RouteName]->DStopCount += 1;
