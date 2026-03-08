@@ -97,4 +97,61 @@ TEST(DijkstraPathRouter, MyCustomGraphTest){
 TEST(DijkstraPathRouter, BiredictionalEdges){
     CDijkstraPathRouter PathRouter;
 
+    auto vertexA = PathRouter.AddVertex(std::string("A"));
+    auto vertexB = PathRouter.AddVertex(std::string("B"));
+    auto vertexC = PathRouter.AddVertex(std::string("C"));
+    auto vertexD = PathRouter.AddVertex(std::string("D"));
+    auto vertexE = PathRouter.AddVertex(std::string("E"));
+    auto vertexF = PathRouter.AddVertex(std::string("F"));
+    auto vertexG = PathRouter.AddVertex(std::string("G"));
+
+    EXPECT_EQ(PathRouter.VertexCount(), 7);
+    EXPECT_TRUE(PathRouter.AddEdge(vertexA, vertexB, 1.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexA, vertexG, 10.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexA, vertexD, 3.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexA, vertexC, 2.0, true));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexE, 7.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexC, 4.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexD, 2.0, true));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexC, vertexE, 2.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexC, vertexD, 3.0, true));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexE, vertexG, 8.0, true));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexE, vertexF, 3.0, true));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexF, vertexG, 1.0, true));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexG, vertexD, 6.0, true));
+
+    std::vector<CPathRouter::TVertexID> RegularPath1;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexG, RegularPath1), 8.0);
+    std::vector<CPathRouter::TVertexID> ExpectedPath1{vertexA, vertexC, vertexE, vertexF, vertexG};
+    EXPECT_EQ(RegularPath1, ExpectedPath1);
+
+    std::vector<CPathRouter::TVertexID> RegularPath2;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexF, RegularPath2), 7.0);
+    std::vector<CPathRouter::TVertexID> Exp2{vertexA, vertexC, vertexE, vertexF};
+    EXPECT_EQ(RegularPath2, Exp2);
+
+    std::vector<CPathRouter::TVertexID> RegularPath3;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexB, vertexG, RegularPath3), 8.0);
+    std::vector<CPathRouter::TVertexID> Exp3{vertexB, vertexD, vertexG};
+    EXPECT_EQ(RegularPath3, Exp3);
+
+    std::vector<CPathRouter::TVertexID> RegularPath4;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexE, RegularPath4), 4.0);
+    std::vector<CPathRouter::TVertexID> Exp4{vertexA, vertexC, vertexE};
+    EXPECT_EQ(RegularPath4, Exp4);
+
+    std::vector<CPathRouter::TVertexID> RegularPath5;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexB, RegularPath5), 1.0);
+    std::vector<CPathRouter::TVertexID> Exp5{vertexA, vertexB};
+    EXPECT_EQ(RegularPath5, Exp5);
+
+    std::vector<CPathRouter::TVertexID> RegularPath6;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexC, RegularPath6), 2.0);
+    std::vector<CPathRouter::TVertexID> Exp6{vertexA, vertexC};
+    EXPECT_EQ(RegularPath6, Exp6);
 }
