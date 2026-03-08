@@ -154,7 +154,7 @@ std::any CDijkstraPathRouter::GetVertexTag(TVertexID id) const noexcept {
 }
 
 bool CDijkstraPathRouter::AddEdge(TVertexID src, TVertexID dest, double weight, bool bidir) noexcept {
-    return DImplementation->AddEdge(src, dest, weight, bidir=false);
+    return DImplementation->AddEdge(src, dest, weight, bidir);
 }
 
 bool CDijkstraPathRouter::Precompute(std::chrono::steady_clock::time_point deadline) noexcept {
