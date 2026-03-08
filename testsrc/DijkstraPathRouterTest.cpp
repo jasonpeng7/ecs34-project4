@@ -12,6 +12,10 @@ TEST(DijkstraPathRouter, SimpleTest){
     auto VertexID2 = PathRouter.AddVertex(22);
     EXPECT_EQ(PathRouter.VertexCount(), 2);
     EXPECT_EQ(std::any_cast<int>(PathRouter.GetVertexTag(VertexID2)), 22);
+
+    auto invalidVert = PathRouter.AddVertex(std::string("A"));
+    auto invalid_get_tag = PathRouter.GetVertexTag(invalidVert + 1);
+    EXPECT_FALSE(invalid_get_tag.has_value());
 }
 
 TEST(DijkstraPathRouter, ShortestPath){
@@ -38,6 +42,8 @@ TEST(DijkstraPathRouter, ShortestPath){
     EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexC, 5.0));
     EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexD, 2.0));
     EXPECT_TRUE(PathRouter.AddEdge(vertexD, vertexC, 1.0));
+    // try to add invalid edge
+    EXPECT_FALSE(PathRouter.AddEdge(vertexA, 5, 3.0));
 
     std::vector<CPathRouter::TVertexID> Regular_Path;
     EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexC, Regular_Path), 7.0);
