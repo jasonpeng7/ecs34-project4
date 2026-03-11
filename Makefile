@@ -43,7 +43,7 @@ TEST_CSVBSINDEX_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/DSV
 TEST_OSM_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/XMLReader.o $(TESTOBJ_DIR)/OpenStreetMap.o $(TESTOBJ_DIR)/OpenStreetMapTest.o
 TEST_DPR_OBJ_FILES = $(TESTOBJ_DIR)/DijkstraPathRouter.o $(TESTOBJ_DIR)/DijkstraPathRouterTest.o
 TEST_TPCLI_OBJ_FILES = $(TESTOBJ_DIR)/TransportationPlannerCommandLine.o $(TESTOBJ_DIR)/StringDataSink.o $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/GeographicUtils.o $(TESTOBJ_DIR)/TPCommandLineTest.o
-TEST_DTP_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/StringUtils.o $(TESTOBJ_DIR)/XMLReader.o $(TESTOBJ_DIR)/DSVReader.o $(TESTOBJ_DIR)/OpenStreetMap.o $(TESTOBJ_DIR)/CSVBusSystem.o $(TESTOBJ_DIR)/BusSystemIndexer.o $(TESTOBJ_DIR)/DijkstraPathRouter.o $(TESTOBJ_DIR)/GeographicUtils.o $(TESTOBJ_DIR)/DijkstraTransportationPlanner.o $(TESTOBJ_DIR)/CSVOSMTransportationPlannerTest.o
+TEST_DTP_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/StringUtils.o $(TESTOBJ_DIR)/XMLReader.o $(TESTOBJ_DIR)/DSVReader.o $(TESTOBJ_DIR)/OpenStreetMap.o $(TESTOBJ_DIR)/CSVBusSystem.o $(TESTOBJ_DIR)/BusSystemIndexer.o $(TESTOBJ_DIR)/DijkstraPathRouter.o $(TESTOBJ_DIR)/GeographicUtils.o $(TESTOBJ_DIR)/CSVOSMTransportationPlannerTest.o
 
 # Define the test target
 TEST_STR_TARGET	= $(TESTBIN_DIR)/teststrutils
