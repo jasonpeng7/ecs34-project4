@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <iomanip>
 #include <limits>
 #include <memory>
@@ -92,15 +93,8 @@ namespace
             return defaultspeed;
         }
 
-        try
-        {
-            auto Parsed = std::stod(Digits);
-            return Parsed > 0.0 ? Parsed : defaultspeed;
-        }
-        catch (...)
-        {
-            return defaultspeed;
-        }
+        auto Parsed = std::strtod(Digits.c_str(), nullptr);
+        return Parsed > 0.0 ? Parsed : defaultspeed;
     }
 
 } // namespace
@@ -200,11 +194,6 @@ struct CDijkstraTransportationPlanner::SImplementation
         {
             ReplaceExisting = true;
         }
-        else if ((Search->second.DName == name) && (distance < Search->second.DDistance))
-        {
-            ReplaceExisting = true;
-        }
-
         if (ReplaceExisting)
         {
             Search->second = {wayid, distance, name};
@@ -252,17 +241,10 @@ struct CDijkstraTransportationPlanner::SImplementation
                     continue;
                 }
 
-                auto SrcShortestVertex = DShortestVertexByNode.find(SrcNodeID);
-                auto DestShortestVertex = DShortestVertexByNode.find(DestNodeID);
-                auto SrcFastestVertex = DFastestVertexByNode.find(SrcNodeID);
-                auto DestFastestVertex = DFastestVertexByNode.find(DestNodeID);
-                if ((SrcShortestVertex == DShortestVertexByNode.end()) ||
-                    (DestShortestVertex == DShortestVertexByNode.end()) ||
-                    (SrcFastestVertex == DFastestVertexByNode.end()) ||
-                    (DestFastestVertex == DFastestVertexByNode.end()))
-                {
-                    continue;
-                }
+                auto SrcShortestVertex = DShortestVertexByNode.at(SrcNodeID);
+                auto DestShortestVertex = DShortestVertexByNode.at(DestNodeID);
+                auto SrcFastestVertex = DFastestVertexByNode.at(SrcNodeID);
+                auto DestFastestVertex = DFastestVertexByNode.at(DestNodeID);
 
                 auto Distance = SGeographicUtils::HaversineDistanceInMiles(
                     SrcNode->Location(),
@@ -273,19 +255,19 @@ struct CDijkstraTransportationPlanner::SImplementation
                 auto DriveTime = Distance / SpeedLimit;
 
                 DShortestRouter.AddEdge(
-                    SrcShortestVertex->second,
-                    DestShortestVertex->second,
+                    SrcShortestVertex,
+                    DestShortestVertex,
                     Distance,
                     Bidirectional);
 
                 DFastestRouter.AddEdge(
-                    SrcFastestVertex->second,
-                    DestFastestVertex->second,
+                    SrcFastestVertex,
+                    DestFastestVertex,
                     WalkTime,
                     Bidirectional);
                 DFastestRouter.AddEdge(
-                    SrcFastestVertex->second,
-                    DestFastestVertex->second,
+                    SrcFastestVertex,
+                    DestFastestVertex,
                     BikeTime,
                     Bidirectional);
 
@@ -390,17 +372,9 @@ struct CDijkstraTransportationPlanner::SImplementation
             {
                 auto SrcStop = DBusSystem->StopByID(Route->GetStopID(StopIndex - 1));
                 auto DestStop = DBusSystem->StopByID(Route->GetStopID(StopIndex));
-                if (!SrcStop || !DestStop)
-                {
-                    continue;
-                }
 
-                auto SrcVertex = DFastestVertexByNode.find(SrcStop->NodeID());
-                auto DestVertex = DFastestVertexByNode.find(DestStop->NodeID());
-                if ((SrcVertex == DFastestVertexByNode.end()) || (DestVertex == DFastestVertexByNode.end()))
-                {
-                    continue;
-                }
+                auto SrcVertex = DFastestVertexByNode.at(SrcStop->NodeID());
+                auto DestVertex = DFastestVertexByNode.at(DestStop->NodeID());
 
                 auto DriveTime = FindDriveTimeBetweenNodes(SrcStop->NodeID(), DestStop->NodeID());
                 if (DriveTime == CPathRouter::NoPathExists)
@@ -409,7 +383,7 @@ struct CDijkstraTransportationPlanner::SImplementation
                 }
 
                 auto BusTime = DriveTime + (DConfig->BusStopTime() / 3600.0);
-                DFastestRouter.AddEdge(SrcVertex->second, DestVertex->second, BusTime, false);
+                DFastestRouter.AddEdge(SrcVertex, DestVertex, BusTime, false);
                 AddFastestCandidate(
                     SrcStop->NodeID(),
                     DestStop->NodeID(),
@@ -443,27 +417,27 @@ struct CDijkstraTransportationPlanner::SImplementation
         return true;
     }
 
-    bool LookupBestFastestEdge(TNodeID src, TNodeID dest, SFastestEdgeInfo &edge) const
+    const SStreetSegmentInfo &StreetSegment(TNodeID src, TNodeID dest) const
     {
-        auto Search = DFastestEdgesByPair.find(std::make_pair(src, dest));
-        if ((Search == DFastestEdgesByPair.end()) || Search->second.empty())
-        {
-            return false;
-        }
+        return DStreetSegments.at(std::make_pair(src, dest));
+    }
 
-        edge = Search->second.front();
-        for (const auto &Candidate : Search->second)
+    SFastestEdgeInfo BestFastestEdge(TNodeID src, TNodeID dest) const
+    {
+        const auto &Candidates = DFastestEdgesByPair.at(std::make_pair(src, dest));
+        auto BestEdge = Candidates.front();
+        for (const auto &Candidate : Candidates)
         {
-            if (Candidate.DWeight < edge.DWeight)
+            if (Candidate.DWeight < BestEdge.DWeight)
             {
-                edge = Candidate;
+                BestEdge = Candidate;
             }
-            else if ((Candidate.DWeight == edge.DWeight) && (Candidate.DRouteName < edge.DRouteName))
+            else if ((Candidate.DWeight == BestEdge.DWeight) && (Candidate.DRouteName < BestEdge.DRouteName))
             {
-                edge = Candidate;
+                BestEdge = Candidate;
             }
         }
-        return true;
+        return BestEdge;
     }
 
     double FindShortestPath(TNodeID src, TNodeID dest, std::vector<TNodeID> &path)
@@ -487,11 +461,6 @@ struct CDijkstraTransportationPlanner::SImplementation
         path.reserve(VertexPath.size());
         for (auto VertexID : VertexPath)
         {
-            if (VertexID >= DNodeByShortestVertex.size())
-            {
-                path.clear();
-                return CPathRouter::NoPathExists;
-            }
             path.push_back(DNodeByShortestVertex[VertexID]);
         }
 
@@ -520,30 +489,14 @@ struct CDijkstraTransportationPlanner::SImplementation
         NodePath.reserve(VertexPath.size());
         for (auto VertexID : VertexPath)
         {
-            if (VertexID >= DNodeByFastestVertex.size())
-            {
-                path.clear();
-                return CPathRouter::NoPathExists;
-            }
             NodePath.push_back(DNodeByFastestVertex[VertexID]);
         }
 
-        if (NodePath.empty())
-        {
-            return CPathRouter::NoPathExists;
-        }
-
         std::vector<SFastestEdgeInfo> EdgeModes;
-        EdgeModes.reserve(NodePath.size() > 0 ? NodePath.size() - 1 : 0);
+        EdgeModes.reserve(NodePath.size());
         for (std::size_t Index = 1; Index < NodePath.size(); Index++)
         {
-            SFastestEdgeInfo Edge;
-            if (!LookupBestFastestEdge(NodePath[Index - 1], NodePath[Index], Edge))
-            {
-                path.clear();
-                return CPathRouter::NoPathExists;
-            }
-            EdgeModes.push_back(Edge);
+            EdgeModes.push_back(BestFastestEdge(NodePath[Index - 1], NodePath[Index]));
         }
 
         auto StartingMode = ETransportationMode::Walk;
@@ -659,17 +612,8 @@ struct CDijkstraTransportationPlanner::SImplementation
                     GroupEnd++;
                 }
 
-                if (!DBusIndexer)
-                {
-                    return false;
-                }
-
                 auto StartStop = DBusIndexer->StopByNodeID(path[Index - 1].second);
                 auto EndStop = DBusIndexer->StopByNodeID(path[GroupEnd].second);
-                if (!StartStop || !EndStop)
-                {
-                    return false;
-                }
 
                 desc.push_back(
                     "Take Bus " + *RouteNames.begin() +
@@ -689,11 +633,7 @@ struct CDijkstraTransportationPlanner::SImplementation
             auto TotalDistance = Segment.DDistance;
             while ((GroupEnd + 1 < path.size()) && (path[GroupEnd + 1].first == path[Index].first))
             {
-                SStreetSegmentInfo NextSegment;
-                if (!LookupStreetSegment(path[GroupEnd].second, path[GroupEnd + 1].second, NextSegment))
-                {
-                    return false;
-                }
+                auto NextSegment = StreetSegment(path[GroupEnd].second, path[GroupEnd + 1].second);
 
                 auto MergeNamed = !Segment.DName.empty() && (Segment.DName == NextSegment.DName);
                 auto MergeUnnamed = Segment.DName.empty() && NextSegment.DName.empty() && (Segment.DWayID == NextSegment.DWayID);
@@ -708,10 +648,6 @@ struct CDijkstraTransportationPlanner::SImplementation
 
             auto GroupStartNode = DStreetMap->NodeByID(path[Index - 1].second);
             auto GroupEndNode = DStreetMap->NodeByID(path[GroupEnd].second);
-            if (!GroupStartNode || !GroupEndNode)
-            {
-                return false;
-            }
 
             auto Bearing = SGeographicUtils::CalculateBearing(
                 GroupStartNode->Location(),
