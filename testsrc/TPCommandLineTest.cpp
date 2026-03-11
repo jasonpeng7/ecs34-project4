@@ -289,3 +289,214 @@ TEST(TransporationPlannerCommandLine, ErrorTest){
                                     "No valid path to save, see help.\n"
                                     "No valid path to print, see help.\n");
 }
+
+TEST(TransporationPlannerCommandLine, HandlesCRLFAndBlankLines){
+    auto InputSource = std::make_shared<CStringDataSource>("count\r\n\r\nexit\r\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+
+    EXPECT_CALL(*MockPlanner, NodeCount())
+        .WillRepeatedly(::testing::Return(4));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> "
+                                    "4 nodes\n"
+                                    "> "
+                                    "> ");
+    EXPECT_TRUE(ErrorSink->String().empty());
+}
+
+TEST(TransporationPlannerCommandLine, NullOutputSinkIsAllowed){
+    auto InputSource = std::make_shared<CStringDataSource>("exit\n");
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,nullptr,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_TRUE(ErrorSink->String().empty());
+}
+
+TEST(TransporationPlannerCommandLine, NodeIndexOutOfRangeTest){
+    auto InputSource = std::make_shared<CStringDataSource>("node 4\nexit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+
+    EXPECT_CALL(*MockPlanner, NodeCount())
+        .WillRepeatedly(::testing::Return(4));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> > ");
+    EXPECT_EQ(ErrorSink->String(),"Invalid node parameter, see help.\n");
+}
+
+TEST(TransporationPlannerCommandLine, NodeLookupFailureTest){
+    auto InputSource = std::make_shared<CStringDataSource>("node 0\nexit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+
+    EXPECT_CALL(*MockPlanner, NodeCount())
+        .WillRepeatedly(::testing::Return(1));
+
+    EXPECT_CALL(*MockPlanner, SortedNodeByIndex(0))
+        .WillRepeatedly(::testing::Return(std::shared_ptr<CStreetMap::SNode>()));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> > ");
+    EXPECT_EQ(ErrorSink->String(),"Invalid node parameter, see help.\n");
+}
+
+TEST(TransporationPlannerCommandLine, ShortestNoPathTest){
+    auto InputSource = std::make_shared<CStringDataSource>("shortest 123 456\nexit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+
+    EXPECT_CALL(*MockPlanner, FindShortestPath(123, 456, ::testing::_))
+        .WillRepeatedly(::testing::Return(CPathRouter::NoPathExists));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> > ");
+    EXPECT_EQ(ErrorSink->String(),"No path found.\n");
+}
+
+TEST(TransporationPlannerCommandLine, FastestNoPathInvalidatesLastPath){
+    auto InputSource = std::make_shared<CStringDataSource>( "fastest 123 456\n"
+                                                            "fastest 123 456\n"
+                                                            "save\n"
+                                                            "exit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+    std::vector<CTransportationPlanner::TTripStep> ExpectedSteps = {
+        {CTransportationPlanner::ETransportationMode::Walk, 123},
+        {CTransportationPlanner::ETransportationMode::Walk, 456}
+    };
+
+    EXPECT_CALL(*MockPlanner, FindFastestPath(123, 456, ::testing::_))
+        .WillOnce(::testing::DoAll(::testing::SetArgReferee<2>(ExpectedSteps),::testing::Return(0.65)))
+        .WillOnce(::testing::Return(CPathRouter::NoPathExists));
+
+    EXPECT_CALL(*MockFactory, CreateSink(::testing::_))
+        .Times(0);
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> "
+                                    "Fastest path takes 39 min.\n"
+                                    "> "
+                                    "> "
+                                    "> ");
+    EXPECT_EQ(ErrorSink->String(),"No path found.\n"
+                                  "No valid path to save, see help.\n");
+}
+
+TEST(TransporationPlannerCommandLine, SaveSinkCreationFailureTest){
+    auto InputSource = std::make_shared<CStringDataSource>( "fastest 123 456\n"
+                                                            "save\n"
+                                                            "exit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+    std::vector<CTransportationPlanner::TTripStep> ExpectedSteps = {
+        {CTransportationPlanner::ETransportationMode::Walk, 10},
+        {CTransportationPlanner::ETransportationMode::Bus, 20}
+    };
+
+    EXPECT_CALL(*MockPlanner, FindFastestPath(123, 456, ::testing::_))
+        .WillRepeatedly(::testing::DoAll(::testing::SetArgReferee<2>(ExpectedSteps),::testing::Return(1.375)));
+
+    EXPECT_CALL(*MockFactory, CreateSink(std::string("123_456_1.375000hr.csv")))
+        .WillRepeatedly(::testing::Return(std::shared_ptr<CDataSink>()));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> "
+                                    "Fastest path takes 1 hr 22 min 30 sec.\n"
+                                    "> "
+                                    "> ");
+    EXPECT_EQ(ErrorSink->String(),"No valid path to save, see help.\n");
+}
+
+TEST(TransporationPlannerCommandLine, PrintDescriptionFailureTest){
+    auto InputSource = std::make_shared<CStringDataSource>( "fastest 123 456\n"
+                                                            "print\n"
+                                                            "exit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+    std::vector<CTransportationPlanner::TTripStep> ExpectedSteps = {
+        {CTransportationPlanner::ETransportationMode::Walk, 10},
+        {CTransportationPlanner::ETransportationMode::Walk, 20}
+    };
+
+    EXPECT_CALL(*MockPlanner, FindFastestPath(123, 456, ::testing::_))
+        .WillRepeatedly(::testing::DoAll(::testing::SetArgReferee<2>(ExpectedSteps),::testing::Return(0.65)));
+
+    EXPECT_CALL(*MockPlanner, GetPathDescription(::testing::_, ::testing::_))
+        .WillRepeatedly(::testing::Return(false));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> "
+                                    "Fastest path takes 39 min.\n"
+                                    "> "
+                                    "> ");
+    EXPECT_EQ(ErrorSink->String(),"No valid path to print, see help.\n");
+}
+
+TEST(TransporationPlannerCommandLine, SaveBikeModeTest){
+    auto InputSource = std::make_shared<CStringDataSource>( "fastest 123 456\n"
+                                                            "save\n"
+                                                            "exit\n");
+    auto OutputSink = std::make_shared<CStringDataSink>();
+    auto ErrorSink = std::make_shared<CStringDataSink>();
+    auto MockPlanner = std::make_shared<CMockTransportationPlanner>();
+    auto MockFactory = std::make_shared<CMockFactory>();
+    auto SaveSink = std::make_shared<CStringDataSink>();
+    std::vector<CTransportationPlanner::TTripStep> ExpectedSteps = {
+        {CTransportationPlanner::ETransportationMode::Bike, 10},
+        {CTransportationPlanner::ETransportationMode::Bike, 11}
+    };
+
+    EXPECT_CALL(*MockPlanner, FindFastestPath(123, 456, ::testing::_))
+        .WillRepeatedly(::testing::DoAll(::testing::SetArgReferee<2>(ExpectedSteps),::testing::Return(0.5)));
+
+    EXPECT_CALL(*MockFactory, CreateSink(std::string("123_456_0.500000hr.csv")))
+        .WillRepeatedly(::testing::Return(SaveSink));
+
+    CTransportationPlannerCommandLine CommandLine(InputSource,OutputSink,ErrorSink,MockFactory,MockPlanner);
+
+    EXPECT_TRUE(CommandLine.ProcessCommands());
+    EXPECT_EQ(OutputSink->String(),"> "
+                                    "Fastest path takes 30 min.\n"
+                                    "> "
+                                    "Path saved to <results>/123_456_0.500000hr.csv\n"
+                                    "> ");
+    EXPECT_EQ(SaveSink->String(),"mode,node_id\n"
+                                 "Bike,10\n"
+                                 "Bike,11");
+    EXPECT_TRUE(ErrorSink->String().empty());
+}
