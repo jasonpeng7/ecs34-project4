@@ -22,6 +22,9 @@ INCLUDE			+= -I $(INC_DIR)
 CFLAGS			+= `pkg-config --cflags $(PKGS)`
 CPPFLAGS		+= -std=c++20
 LDFLAGS			= `pkg-config --libs $(PKGS)`
+GTEST_INCLUDE	+= -I ./googletest/googletest/include -I ./googletest/googlemock/include -I ./googletest/googletest -I ./googletest/googlemock
+GTEST_SOURCES	= ./googletest/googletest/src/gtest-all.cc ./googletest/googletest/src/gtest_main.cc
+GMOCK_SOURCES	= ./googletest/googlemock/src/gmock-all.cc
 
 TEST_CFLAGS		= $(CFLAGS) -O0 -g --coverage
 TEST_CPPFLAGS	= $(CPPFLAGS) -fno-inline
@@ -39,6 +42,8 @@ TEST_CSVBS_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/DSVReade
 TEST_CSVBSINDEX_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/DSVReader.o $(TESTOBJ_DIR)/CSVBusSystem.o $(TESTOBJ_DIR)/BusSystemIndexer.o  $(TESTOBJ_DIR)/CSVBusSystemIndexerTest.o
 TEST_OSM_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/XMLReader.o $(TESTOBJ_DIR)/OpenStreetMap.o $(TESTOBJ_DIR)/OpenStreetMapTest.o
 TEST_DPR_OBJ_FILES = $(TESTOBJ_DIR)/DijkstraPathRouter.o $(TESTOBJ_DIR)/DijkstraPathRouterTest.o
+TEST_TPCLI_OBJ_FILES = $(TESTOBJ_DIR)/TransportationPlannerCommandLine.o $(TESTOBJ_DIR)/StringDataSink.o $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/GeographicUtils.o $(TESTOBJ_DIR)/TPCommandLineTest.o
+TEST_DTP_OBJ_FILES = $(TESTOBJ_DIR)/StringDataSource.o $(TESTOBJ_DIR)/StringUtils.o $(TESTOBJ_DIR)/XMLReader.o $(TESTOBJ_DIR)/DSVReader.o $(TESTOBJ_DIR)/OpenStreetMap.o $(TESTOBJ_DIR)/CSVBusSystem.o $(TESTOBJ_DIR)/BusSystemIndexer.o $(TESTOBJ_DIR)/DijkstraPathRouter.o $(TESTOBJ_DIR)/GeographicUtils.o $(TESTOBJ_DIR)/DijkstraTransportationPlanner.o $(TESTOBJ_DIR)/CSVOSMTransportationPlannerTest.o
 
 # Define the test target
 TEST_STR_TARGET	= $(TESTBIN_DIR)/teststrutils
@@ -52,9 +57,11 @@ TEST_CSVBS_TARGET = $(TESTBIN_DIR)/testcsvbs
 TEST_CSVBSINDEX_TARGET = $(TESTBIN_DIR)/testcsvbsindexer
 TEST_OSM_TARGET	= $(TESTBIN_DIR)/testosm
 TEST_DPR_TARGET = $(TESTBIN_DIR)/testdijkstrapathrouter
+TEST_TPCLI_TARGET = $(TESTBIN_DIR)/testtpcommandline
+TEST_DTP_TARGET = $(TESTBIN_DIR)/testdijkstratransportationplanner
 
 
-all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_osmtest run_dprtest gencoverage
+all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_osmtest run_dprtest run_tpclitest run_dtptest gencoverage
 
 .PHONY: cleangcda
 cleangcda:
@@ -73,7 +80,7 @@ run_strsinktest: $(TEST_STRSINK_TARGET)
 	mv $(TESTTMP_DIR)/$@ $@
 
 run_filesstest: $(TEST_FILESS_TARGET)
-    $(TEST_FILESS_TARGET) --gtest_output=xml:$(TESTTMP_DIR)/$@
+	$(TEST_FILESS_TARGET) --gtest_output=xml:$(TESTTMP_DIR)/$@
 	mv $(TESTTMP_DIR)/$@ $@
 
 run_geoutilstest: $(TEST_GEOUTILS_TARGET)
@@ -102,6 +109,14 @@ run_osmtest: $(TEST_OSM_TARGET)
 
 run_dprtest: $(TEST_DPR_TARGET)
 	$(TEST_DPR_TARGET) --gtest_output=xml:$(TESTTMP_DIR)/$@
+	mv $(TESTTMP_DIR)/$@ $@
+
+run_tpclitest: $(TEST_TPCLI_TARGET)
+	$(TEST_TPCLI_TARGET) --gtest_output=xml:$(TESTTMP_DIR)/$@
+	mv $(TESTTMP_DIR)/$@ $@
+
+run_dtptest: $(TEST_DTP_TARGET)
+	$(TEST_DTP_TARGET) --gtest_output=xml:$(TESTTMP_DIR)/$@
 	mv $(TESTTMP_DIR)/$@ $@
 
 gencoverage:
@@ -141,6 +156,18 @@ $(TEST_OSM_TARGET): $(TEST_OSM_OBJ_FILES)
 
 $(TEST_DPR_TARGET): $(TEST_DPR_OBJ_FILES)
 	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(TEST_DPR_OBJ_FILES) $(TEST_LDFLAGS) -o $(TEST_DPR_TARGET)
+
+$(TEST_TPCLI_TARGET): $(TEST_TPCLI_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(GTEST_INCLUDE) $(TEST_TPCLI_OBJ_FILES) $(GTEST_SOURCES) $(GMOCK_SOURCES) $(LDFLAGS) -lpthread -o $(TEST_TPCLI_TARGET)
+
+$(TEST_DTP_TARGET): $(TEST_DTP_OBJ_FILES)
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(GTEST_INCLUDE) $(TEST_DTP_OBJ_FILES) $(GTEST_SOURCES) $(LDFLAGS) -lpthread -o $(TEST_DTP_TARGET)
+
+$(TESTOBJ_DIR)/TPCommandLineTest.o: $(TESTSRC_DIR)/TPCommandLineTest.cpp
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) $(GTEST_INCLUDE) -c $< -o $@
+
+$(TESTOBJ_DIR)/CSVOSMTransportationPlannerTest.o: $(TESTSRC_DIR)/CSVOSMTransportationPlannerTest.cpp
+	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) $(GTEST_INCLUDE) -c $< -o $@
 
 $(TESTOBJ_DIR)/%.o: $(TESTSRC_DIR)/%.cpp
 	$(CXX) $(TEST_CFLAGS) $(TEST_CPPFLAGS) $(DEFINES) $(INCLUDE) -c $< -o $@
