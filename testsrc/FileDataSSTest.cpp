@@ -55,3 +55,61 @@ TEST(FileDataSourceSink, WriteTest){
     EXPECT_EQ(InBuffer,OutBuffer);
     EXPECT_TRUE(Source->End());
 }
+
+TEST(FileDataSourceSink, PeekTest){
+    CFileDataFactory DataFactory(BaseDirectory);
+    std::string Filename = "peek.txt";
+    std::remove((BaseDirectory + Filename).c_str());
+    {
+        auto Sink = DataFactory.CreateSink(Filename);
+        EXPECT_TRUE(Sink->Put('A'));
+        EXPECT_TRUE(Sink->Put('B'));
+    }
+
+    auto Source = DataFactory.CreateSource(Filename);
+    char TempCh = '\0';
+
+    EXPECT_TRUE(Source->Peek(TempCh));
+    EXPECT_EQ(TempCh, 'A');
+    EXPECT_TRUE(Source->Get(TempCh));
+    EXPECT_EQ(TempCh, 'A');
+    EXPECT_TRUE(Source->Peek(TempCh));
+    EXPECT_EQ(TempCh, 'B');
+    EXPECT_TRUE(Source->Get(TempCh));
+    EXPECT_EQ(TempCh, 'B');
+    EXPECT_TRUE(Source->End());
+}
+
+TEST(FileDataSourceSink, EmptySourceFailureStateTest){
+    CFileDataFactory DataFactory(BaseDirectory);
+    std::string Filename = "empty_failure.txt";
+    std::remove((BaseDirectory + Filename).c_str());
+    {
+        auto Sink = DataFactory.CreateSink(Filename);
+    }
+
+    auto Source = DataFactory.CreateSource(Filename);
+    char TempCh = '\0';
+    std::vector<char> Buffer = {'x'};
+
+    EXPECT_TRUE(Source->End());
+    EXPECT_FALSE(Source->Get(TempCh));
+    EXPECT_FALSE(Source->Peek(TempCh));
+    EXPECT_FALSE(Source->Read(Buffer, 4));
+    EXPECT_EQ(Buffer, std::vector<char>({'x'}));
+}
+
+TEST(FileDataSourceSink, MissingSourceFailureStateTest){
+    CFileDataFactory DataFactory(BaseDirectory);
+    std::string Filename = "missing.txt";
+    std::remove((BaseDirectory + Filename).c_str());
+
+    auto Source = DataFactory.CreateSource(Filename);
+    char TempCh = '\0';
+    std::vector<char> Buffer = {'x'};
+
+    EXPECT_FALSE(Source->Get(TempCh));
+    EXPECT_FALSE(Source->Peek(TempCh));
+    EXPECT_FALSE(Source->Read(Buffer, 2));
+    EXPECT_EQ(Buffer, std::vector<char>({'x'}));
+}
