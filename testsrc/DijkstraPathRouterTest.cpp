@@ -161,3 +161,21 @@ TEST(DijkstraPathRouter, BiredictionalEdges){
     std::vector<CPathRouter::TVertexID> Exp6{vertexA, vertexC};
     EXPECT_EQ(RegularPath6, Exp6);
 }
+
+TEST(DijkstraPathRouter, PrecomputeTest){
+    CDijkstraPathRouter PathRouter;
+
+    auto vertexA = PathRouter.AddVertex(std::string("A"));
+    auto vertexB = PathRouter.AddVertex(std::string("B"));
+    auto vertexC = PathRouter.AddVertex(std::string("C"));
+
+    EXPECT_TRUE(PathRouter.AddEdge(vertexA, vertexB, 2.0));
+    EXPECT_TRUE(PathRouter.AddEdge(vertexB, vertexC, 1.5));
+
+    EXPECT_TRUE(PathRouter.Precompute(std::chrono::steady_clock::now()));
+
+    std::vector<CPathRouter::TVertexID> Path;
+    EXPECT_EQ(PathRouter.FindShortestPath(vertexA, vertexC, Path), 3.5);
+    std::vector<CPathRouter::TVertexID> ExpectedPath{vertexA, vertexB, vertexC};
+    EXPECT_EQ(Path, ExpectedPath);
+}

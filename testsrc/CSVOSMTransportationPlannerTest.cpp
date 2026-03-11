@@ -5,9 +5,14 @@
 #include "OpenStreetMap.h"
 #include "CSVBusSystem.h"
 #include "TransportationPlannerConfig.h"
+#define private public
 #include "DijkstraTransportationPlanner.h"
+#undef private
 #include "GeographicUtils.h"
+#include <functional>
 #include <unordered_set>
+
+#include "../src/DijkstraTransportationPlanner.cpp"
 
 namespace {
 
@@ -169,10 +174,17 @@ class CTestBusSystem : public CBusSystem {
         struct SRouteImpl : public CBusSystem::SRoute {
             std::string DName;
             std::vector<TStopID> DStopIDs;
+            std::function<void()> DOnName;
+            bool DEnableNameHook = false;
 
             explicit SRouteImpl(std::string name) : DName(std::move(name)) {}
 
-            std::string Name() const noexcept override { return DName; }
+            std::string Name() const noexcept override {
+                if (DEnableNameHook && DOnName) {
+                    DOnName();
+                }
+                return DName;
+            }
             std::size_t StopCount() const noexcept override { return DStopIDs.size(); }
             TStopID GetStopID(std::size_t index) const noexcept override {
                 return index < DStopIDs.size() ? DStopIDs[index] : InvalidStopID;
@@ -218,6 +230,15 @@ class CTestBusSystem : public CBusSystem {
         void SetStopLookupResponses(TStopID id, const std::vector<bool> &responses) {
             DStopLookupResponses[id] = responses;
             DStopLookupCalls.erase(id);
+        }
+
+        void SetRouteNameCallback(const std::string &name, std::function<void()> callback) {
+            for (const auto &Route : DRoutesByIndex) {
+                if (Route->DName == name) {
+                    Route->DOnName = std::move(callback);
+                    Route->DEnableNameHook = true;
+                }
+            }
         }
 
         std::size_t StopCount() const noexcept override { return DStopsByIndex.size(); }
@@ -1029,5 +1050,89 @@ TEST(CSVOSMTransporationPlanner, PathDescriptionCorruptPublicInputs){
         {CTransportationPlanner::ETransportationMode::Bike, 1},
         {CTransportationPlanner::ETransportationMode::Bike, 2},
         {CTransportationPlanner::ETransportationMode::Bike, 3}
+    }, Description));
+}
+
+TEST(CSVOSMTransporationPlanner, WhiteBoxModeToStringBusCoverage){
+    EXPECT_EQ(ModeToString(CTransportationPlanner::ETransportationMode::Bus), "Bus");
+}
+
+TEST(CSVOSMTransporationPlanner, WhiteBoxLookupBestFastestEdgeFailureCoverage){
+    auto StreetMap = std::make_shared<CTestStreetMap>();
+    StreetMap->AddNode(1, 38.5, -121.70);
+    StreetMap->AddNode(2, 38.5, -121.71);
+    StreetMap->AddWay(10, {1, 2}, {{"name", "A St."}});
+
+    auto Config = std::make_shared<STransportationPlannerConfig>(StreetMap, nullptr);
+    CDijkstraTransportationPlanner Planner(Config);
+
+    SFastestEdgeInfo Edge;
+    EXPECT_FALSE(Planner.DImplementation->LookupBestFastestEdge(99, 100, Edge));
+
+    Planner.DImplementation->DFastestEdgesByPair[std::make_pair(1, 2)] = {};
+    EXPECT_FALSE(Planner.DImplementation->LookupBestFastestEdge(1, 2, Edge));
+}
+
+TEST(CSVOSMTransporationPlanner, WhiteBoxInvalidVertexIDCoverage){
+    auto StreetMap = std::make_shared<CTestStreetMap>();
+    StreetMap->AddNode(1, 38.5, -121.70);
+    StreetMap->AddNode(2, 38.5, -121.71);
+    StreetMap->AddWay(10, {1, 2}, {{"name", "A St."}});
+
+    auto Config = std::make_shared<STransportationPlannerConfig>(StreetMap, nullptr);
+    CDijkstraTransportationPlanner Planner(Config);
+
+    std::vector<CTransportationPlanner::TNodeID> ShortestPath = {99};
+    Planner.DImplementation->DNodeByShortestVertex.clear();
+    EXPECT_EQ(Planner.FindShortestPath(1, 2, ShortestPath), CPathRouter::NoPathExists);
+    EXPECT_TRUE(ShortestPath.empty());
+
+    std::vector<CTransportationPlanner::TTripStep> FastestPath = {
+        {CTransportationPlanner::ETransportationMode::Walk, 99}
+    };
+    Planner.DImplementation->DNodeByFastestVertex.clear();
+    EXPECT_EQ(Planner.FindFastestPath(1, 2, FastestPath), CPathRouter::NoPathExists);
+    EXPECT_TRUE(FastestPath.empty());
+}
+
+TEST(CSVOSMTransporationPlanner, WhiteBoxMissingFastestMetadataCoverage){
+    auto StreetMap = std::make_shared<CTestStreetMap>();
+    StreetMap->AddNode(1, 38.5, -121.70);
+    StreetMap->AddNode(2, 38.5, -121.71);
+    StreetMap->AddWay(10, {1, 2}, {{"name", "A St."}});
+
+    auto Config = std::make_shared<STransportationPlannerConfig>(StreetMap, nullptr);
+    CDijkstraTransportationPlanner Planner(Config);
+
+    Planner.DImplementation->DFastestEdgesByPair.clear();
+
+    std::vector<CTransportationPlanner::TTripStep> FastestPath = {
+        {CTransportationPlanner::ETransportationMode::Walk, 99}
+    };
+    EXPECT_EQ(Planner.FindFastestPath(1, 2, FastestPath), CPathRouter::NoPathExists);
+    EXPECT_TRUE(FastestPath.empty());
+}
+
+TEST(CSVOSMTransporationPlanner, WhiteBoxBusIndexerNullAfterRouteLookupCoverage){
+    auto StreetMap = std::make_shared<CTestStreetMap>();
+    StreetMap->AddNode(1, 38.5, -121.70);
+    StreetMap->AddNode(2, 38.5, -121.71);
+    StreetMap->AddWay(10, {1, 2}, {{"name", "A St."}});
+
+    auto BusSystem = std::make_shared<CTestBusSystem>();
+    BusSystem->AddIndexedStop(101, 1);
+    BusSystem->AddIndexedStop(102, 2);
+    BusSystem->AddRoute("Ghost", {101, 102});
+
+    auto Config = std::make_shared<STransportationPlannerConfig>(StreetMap, BusSystem);
+    CDijkstraTransportationPlanner Planner(Config);
+    BusSystem->SetRouteNameCallback("Ghost", [&Planner]() {
+        Planner.DImplementation->DBusIndexer.release();
+    });
+
+    std::vector<std::string> Description;
+    EXPECT_FALSE(Planner.GetPathDescription({
+        {CTransportationPlanner::ETransportationMode::Walk, 1},
+        {CTransportationPlanner::ETransportationMode::Bus, 2}
     }, Description));
 }
