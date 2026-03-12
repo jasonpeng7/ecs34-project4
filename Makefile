@@ -63,7 +63,7 @@ TEST_TPCLI_TARGET = $(TESTBIN_DIR)/testtpcommandline
 TEST_DTP_TARGET = $(TESTBIN_DIR)/testdijkstratransportationplanner
 
 
-all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_osmtest run_dprtest run_tpclitest run_dtptest gencoverage
+all: directories cleangcda run_strtest run_strsrctest run_strsinktest run_filesstest run_geoutilstest run_dsvtest run_xmltest run_csvbsindextest run_csvbstest run_osmtest run_dprtest run_tpclitest run_dtptest gencoverage
 
 .PHONY: cleangcda
 cleangcda:
