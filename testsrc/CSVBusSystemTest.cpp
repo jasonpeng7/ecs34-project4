@@ -256,7 +256,8 @@ TEST(CSVBusSystem, MissingHeader){
 TEST(CSVBusSystem, DuplicateRouteStopID){
     auto StopDataSource = std::make_shared< CStringDataSource >("stop_id,node_id\n"
                                                                 "1,123\n"
-                                                                "2,124");
+                                                                "2,124\n"
+                                                                "3,125");
     auto StopReader = std::make_shared< CDSVReader >(StopDataSource, ',');
     auto RouteDataSource = std::make_shared< CStringDataSource >("route,stop_id\n"
                                                                 "A,1\n"
@@ -272,10 +273,17 @@ TEST(CSVBusSystem, DuplicateRouteStopID){
 
     CCSVBusSystem BusSystem(StopReader, RouteReader);
 
-    EXPECT_EQ(BusSystem.StopCount(), 2);
-    EXPECT_EQ(BusSystem.RouteCount(), 1);
+    EXPECT_EQ(BusSystem.StopCount(), 3);
+    EXPECT_EQ(BusSystem.RouteCount(), 3);
     auto RouteObj = BusSystem.RouteByName("A");
-    EXPECT_EQ(RouteObj->StopCount(), 1); 
+    ASSERT_NE(RouteObj, nullptr);
+    EXPECT_EQ(RouteObj->StopCount(), 6);  // duplicate stop_id on a route is allowed
+    RouteObj = BusSystem.RouteByName("B");
+    ASSERT_NE(RouteObj, nullptr);
+    EXPECT_EQ(RouteObj->StopCount(), 1);
+    RouteObj = BusSystem.RouteByName("C");
+    ASSERT_NE(RouteObj, nullptr);
+    EXPECT_EQ(RouteObj->StopCount(), 1);
 }
 
 TEST(CSVBusSystem, MissingColumns){
